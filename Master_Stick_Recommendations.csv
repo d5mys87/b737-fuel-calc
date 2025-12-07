@@ -1,0 +1,13 @@
+Tank_Scope,Min_Kg,Max_Kg,Recommended_Stick,Stick_ID
+Main Wing Tank,0,623,Below Limit,0
+Main Wing Tank,623,1680,Use Stick 3,3
+Main Wing Tank,1680,2673,Use Stick 4,4
+Main Wing Tank,2673,3132,Use Stick 5,5
+Main Wing Tank,3132,3491,Use Stick 6,6
+Main Wing Tank,3491,3790,Use Stick 7,7
+Main Wing Tank,3790,7974,Use Stick 8,8
+Main Wing Tank,7974,13902,Use Stick 8 (+1),8
+Main Wing Tank,13902,99999,Full / Over Limit,0
+Center Tank,0,500,Below Limit,0
+Center Tank,500,2500,Use Stick 1,1
+Center Tank,2500,99999,Use Stick 2,2
