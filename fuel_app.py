@@ -4,6 +4,99 @@ import numpy as np
 
 st.set_page_config(page_title="Fuel Calc (Totalizer Fix)", layout="wide")
 st.title("✈️ B737 Fuel Calculator")
+import streamlit as st
+
+# --- PASTE THIS FUNCTION AT THE TOP OF YOUR FILE ---
+def render_header():
+    """
+    Renders a professional aviation-style technical header
+    at the top of the application.
+    """
+    header_html = """
+    <style>
+        /* Container for the header */
+        .tech-header-container {
+            background-color: #2c3e50; /* Dark Slate Blue */
+            color: #ecf0f1;
+            padding: 15px 25px;
+            margin: -6rem -4rem 1rem -4rem; /* Negative margins to fill Streamlit top gap */
+            border-bottom: 4px solid #34495e;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        /* The 'Reference Only' Badge */
+        .ref-badge {
+            background-color: #34495e;
+            color: #bdc3c7;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border: 1px solid #46637f;
+            white-space: nowrap;
+        }
+
+        /* The Technical Data Text */
+        .tech-text {
+            font-family: 'Source Code Pro', 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #ffffff;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .tech-text span {
+            display: inline-block;
+        }
+        
+        /* Mobile adjustment */
+        @media (max-width: 700px) {
+            .tech-header-container {
+                justify-content: center;
+                text-align: center;
+                gap: 10px;
+            }
+            .tech-text {
+                flex-direction: column;
+                gap: 5px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+
+    <div class="tech-header-container">
+        <div class="ref-badge">
+            ℹ️ For Reference Only
+        </div>
+        <div class="tech-text">
+            <span><strong>FMSM 12-11-03</strong> REV 9</span>
+            <span style="color: #7f8c8d;">|</span>
+            <span>AMM-28-41-00-720-801</span>
+            <span style="color: #7f8c8d;">|</span>
+            <span style="color: #95a5a6;">Jun 10/2007</span>
+        </div>
+    </div>
+    """
+    st.markdown(header_html, unsafe_allow_html=True)
+
+# --- MAIN APP EXECUTION ---
+
+# 1. Setup your page configuration first
+st.set_page_config(page_title="Fuel Calc", layout="wide")
+
+# 2. Call the header function immediately
+render_header()
+
+# 3. Your existing code goes here...
+st.title("Fuel Quantity Indication Check")
+# ... rest of your app
 
 # --- 1. DATA LOADER ---
 @st.cache_data
