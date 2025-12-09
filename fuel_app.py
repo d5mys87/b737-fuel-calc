@@ -110,7 +110,7 @@ def get_fuel_qty(stick, pitch, roll, reading, wing_side):
     
     if subset.empty: return None
 
-    # Robust Reading Match (Fixes floating point misses)
+    # Robust Reading Match
     exact = subset[np.isclose(subset['Reading'], reading, atol=0.01)]
     
     if not exact.empty: return exact.iloc[0]['Fuel_Qty']
@@ -133,25 +133,6 @@ with st.sidebar:
     avail_rolls = sorted(df_db['Roll_Input'].dropna().unique())
     def_idx = avail_rolls.index(10.0) if 10.0 in avail_rolls else 0
     g_roll = st.selectbox("Roll", avail_rolls, index=def_idx)
-    
-    st.markdown("---")
-    
-    col_reset, col_reload = st.columns(2)
-    with col_reset:
-        if st.button("Reset Calc"):
-            for k in ['left_qty', 'center_qty', 'right_qty']: 
-                st.session_state[k] = 0
-            st.rerun() 
-            
-    with col_reload:
-        # --- NEW BUTTON TO CLEAR CACHE ---
-        if st.button("♻️ Reload DB"):
-            st.cache_data.clear()
-            st.rerun()
-            
-    # --- DEBUG INSPECTOR ---
-    st.markdown("---")
-    show_debug = st.checkbox("Show Inspector", value=False)
 
 # --- 9. TABS & CALCULATION ---
 tab1, tab2, tab3 = st.tabs(["Left Wing", "Center", "Right Wing"])
@@ -217,19 +198,6 @@ def render_tab(label, key, scope, default_side):
     # Calculation
     if r_val > 0:
         val = get_fuel_qty(s_val, g_pitch, g_roll, r_val, acc_side)
-        
-        # --- DEBUG INSPECTOR LOGIC ---
-        if show_debug:
-            st.markdown(f"**🔍 Debug for {label}**")
-            # Show the raw row matching the current selection
-            debug_row = df_db[
-                (df_db['Stick'] == s_val) &
-                (df_db['Pitch'] == g_pitch) &
-                (df_db['Wing_Side'] == acc_side) &
-                (np.isclose(df_db['Roll_Input'], g_roll, atol=0.01)) &
-                (np.isclose(df_db['Reading'], r_val, atol=0.01))
-            ]
-            st.dataframe(debug_row)
 
         if val is not None:
             limit_kg = 520 if label == "Center" else 160
