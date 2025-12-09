@@ -1,11 +1,19 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import os
 
-# --- 1. CONFIGURATION (Must be the very first Streamlit command) ---
+# --- 1. CONFIGURATION ---
+# Check if a custom logo exists, otherwise use the emoji
+icon_path = "logo.png"
+if os.path.exists(icon_path):
+    app_icon = icon_path
+else:
+    app_icon = "✈️"
+
 st.set_page_config(
     page_title="Boeing 737 Fuel Dip", 
-    page_icon="✈️", 
+    page_icon=app_icon, 
     layout="wide"
 )
 
@@ -260,7 +268,7 @@ with tab1: render_tab("Left", "left", "Main Wing Tank", "Left")
 with tab2: render_tab("Center", "center", "Center Tank", "Left")
 with tab3: render_tab("Right", "right", "Main Wing Tank", "Right")
 
-# --- 10. UPDATE THE SCOREBOARD (SYNTAX SAFE VERSION) ---
+# --- 10. UPDATE THE SCOREBOARD ---
 final_total = (
     st.session_state.left_qty + 
     st.session_state.center_qty + 
@@ -269,7 +277,7 @@ final_total = (
 
 total_color = "#00FF00" if final_total > 0 else "#888"
 
-# We split CSS and HTML to avoid f-string syntax errors with curly braces
+# CSS for the Cockpit Display
 st_style = """
 <style>
     .cockpit-display {
@@ -337,6 +345,7 @@ st_style = """
 </style>
 """.replace("VARIABLE_COLOR", total_color)
 
+# HTML for the Cockpit Display
 st_html = f"""
 <div class="cockpit-display">
     <div class="gauge-row">
