@@ -3,7 +3,12 @@ import pandas as pd
 import numpy as np
 
 # --- 1. CONFIGURATION (Must be the very first Streamlit command) ---
-st.set_page_config(page_title="Fuel Calc (Totalizer Fix)", layout="wide")
+# UPDATED: Title and Logo for Home Screen Installation
+st.set_page_config(
+    page_title="Boeing 737 Fuel Dip", 
+    page_icon="✈️", 
+    layout="wide"
+)
 
 # --- 2. HEADER FUNCTION ---
 def render_header():
@@ -268,87 +273,4 @@ total_color = "#00FF00" if final_total > 0 else "#888"
 scoreboard.markdown(f"""
     <style>
         .cockpit-display {{
-            background-color: #1E1E1E;
-            border: 3px solid #444;
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-            font-family: 'Source Code Pro', 'Courier New', monospace;
-            color: #E0E0E0;
-            margin-bottom: 20px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-        }}
-        .gauge-row {{
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-            flex-wrap: wrap;
-        }}
-        .gauge-container {{
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-width: 100px;
-            margin: 5px;
-        }}
-        .gauge-label {{
-            color: #00BFFF; /* Cyan-like color */
-            font-size: 1.1rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }}
-        .gauge-value {{
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #FFFFFF;
-            background-color: #000;
-            padding: 5px 12px;
-            border-radius: 5px;
-            border: 2px solid #333;
-            min-width: 90px;
-        }}
-        .total-container {{
-            margin-top: 10px;
-        }}
-        .total-label {{
-            color: #AAA;
-            font-size: 1rem;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }}
-        .total-value {{
-            font-size: 3rem;
-            font-weight: bold;
-            color: {total_color};
-            margin: 0;
-            text-shadow: 0 0 10px rgba(0,255,0,0.3);
-        }}
-        .unit-label {{
-            font-size: 1.5rem;
-            color: #888;
-        }}
-    </style>
-
-    <div class="cockpit-display">
-        <div class="gauge-row">
-            <div class="gauge-container">
-                <div class="gauge-label">TANK 1</div>
-                <div class="gauge-value">{int(st.session_state.left_qty):,}</div>
-            </div>
-            <div class="gauge-container">
-                <div class="gauge-label">CTR</div>
-                <div class="gauge-value">{int(st.session_state.center_qty):,}</div>
-            </div>
-            <div class="gauge-container">
-                <div class="gauge-label">TANK 2</div>
-                <div class="gauge-value">{int(st.session_state.right_qty):,}</div>
-            </div>
-        </div>
-        <div class="total-container">
-            <div class="total-label">Total Fuel On Board</div>
-            <h1 class="total-value">{int(final_total):,} <span class="unit-label">KGS</span></h1>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+            background-color: #
