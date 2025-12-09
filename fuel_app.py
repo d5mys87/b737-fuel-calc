@@ -5,36 +5,50 @@ import numpy as np
 # --- 1. CONFIGURATION (Must be the very first Streamlit command) ---
 st.set_page_config(page_title="Fuel Calc (Totalizer Fix)", layout="wide")
 
-# --- 2. HEADER FUNCTION ---
+# --- 2. HEADER FUNCTION (Fixed Position Version) ---
 def render_header():
     """
     Renders a professional aviation-style technical header
-    at the top of the application.
+    pinned to the top of the viewport.
     """
     header_html = """
     <style>
-        /* Container for the header */
+        /* 1. PIN THE HEADER TO THE TOP */
         .tech-header-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3.5rem; /* Fixed height to match padding push */
             background-color: #2c3e50; /* Dark Slate Blue */
             color: #ecf0f1;
-            padding: 15px 25px;
-            /* Adjusted negative margins to sit at top but not cover system menu */
-            margin: -5rem -4rem 1rem -4rem; 
-            border-bottom: 4px solid #34495e;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            z-index: 999999; /* Sit on top of everything */
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap;
+            padding: 0 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            border-bottom: 3px solid #34495e;
         }
 
-        /* The 'Reference Only' Badge */
+        /* 2. PUSH MAIN CONTENT DOWN SO IT ISN'T HIDDEN */
+        .block-container {
+            padding-top: 5rem !important; /* Forces title below the fixed header */
+        }
+
+        /* 3. HIDE STREAMLIT'S DEFAULT TOP DECORATION (Optional) */
+        header[data-testid="stHeader"] {
+            background-color: transparent;
+        }
+
+        /* BADGE STYLES */
         .ref-badge {
             background-color: #34495e;
             color: #bdc3c7;
             padding: 4px 10px;
             border-radius: 4px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 700;
             letter-spacing: 1px;
             text-transform: uppercase;
@@ -42,32 +56,32 @@ def render_header():
             white-space: nowrap;
         }
 
-        /* The Technical Data Text */
+        /* TEXT STYLES */
         .tech-text {
             font-family: 'Source Code Pro', 'Courier New', monospace;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #ffffff;
             display: flex;
             gap: 15px;
             align-items: center;
         }
 
-        .tech-text span {
-            display: inline-block;
-        }
-        
-        /* Mobile adjustment */
+        /* MOBILE ADJUSTMENTS */
         @media (max-width: 700px) {
             .tech-header-container {
-                justify-content: center;
-                text-align: center;
-                gap: 10px;
-                margin-top: -3rem; /* Less aggressive pull-up on mobile */
+                height: auto;
+                padding: 10px;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .block-container {
+                padding-top: 7rem !important; /* Push content down more on mobile */
             }
             .tech-text {
                 flex-direction: column;
-                gap: 5px;
-                font-size: 0.8rem;
+                gap: 2px;
+                font-size: 0.75rem;
+                text-align: center;
             }
         }
     </style>
@@ -87,12 +101,12 @@ def render_header():
     """
     st.markdown(header_html, unsafe_allow_html=True)
 
-# --- 3. RENDER UI ELEMENTS IN CORRECT ORDER ---
+# --- 3. RENDER UI ELEMENTS ---
 
-# A. Render Header FIRST (so it sits at the top)
+# A. Render Header
 render_header()
 
-# B. Render Title SECOND (so it sits below the header)
+# B. Render Title 
 st.title("✈️ B737 Fuel Calculator")
 st.caption("Fuel Quantity Indication Check")
 
@@ -122,12 +136,10 @@ if data_res[0] is None:
 df_db, df_recs = data_res
 
 # --- 5. SESSION STATE ---
-# Ensure these exist so the totalizer doesn't crash on first load
 for k in ['left_qty', 'center_qty', 'right_qty']:
     if k not in st.session_state: st.session_state[k] = 0
 
 # --- 6. PLACEHOLDER FOR TOTALIZER ---
-# We reserve this spot at the top, but we will fill it at the BOTTOM of the script
 scoreboard = st.empty()
 
 # --- 7. LOGIC ---
@@ -153,7 +165,6 @@ with st.sidebar:
     
     # Pitch
     db_pitches = sorted(df_db['Pitch'].unique())
-    # Sort E..M
     try: db_pitches.sort(key=lambda x: x[0])
     except: pass
     g_pitch = st.selectbox("Pitch", db_pitches)
