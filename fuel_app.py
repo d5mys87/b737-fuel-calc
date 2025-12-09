@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 
 # --- 1. CONFIGURATION (Must be the very first Streamlit command) ---
-# UPDATED: Title and Logo for Home Screen Installation
 st.set_page_config(
     page_title="Boeing 737 Fuel Dip", 
     page_icon="✈️", 
@@ -203,74 +202,4 @@ def render_tab(label, key, scope, default_side):
 
     acc_side = default_side
     if label == "Center":
-        acc_side = st.radio("Access Side", ["Left", "Right"], horizontal=True, key=f"{key}_side")
-
-    c1, c2 = st.columns(2)
-    with c1:
-        est = st.number_input(f"Est. Fuel ({label})", step=100, key=f"{key}_est")
-        if est > 0:
-            rec = df_recs[(df_recs['Tank_Scope']==scope) & (df_recs['Min_Kg']<=est) & (df_recs['Max_Kg']>est)]
-            if not rec.empty: st.info(f"💡 {rec.iloc[0]['Recommended_Stick']}")
-    
-    with c2:
-        if label == "Center": sticks = ["Stick 1", "Stick 2"]
-        else: sticks = ["Stick 3", "Stick 4", "Stick 5", "Stick 6", "Stick 7", "Stick 8"]
-            
-        s_val = st.selectbox(f"Stick ({label})", sticks, key=f"{key}_st")
-        
-        # Roll Detective
-        broad_data = df_db[
-            (df_db['Stick'] == s_val) & 
-            (df_db['Pitch'] == g_pitch) & 
-            (df_db['Wing_Side'] == acc_side)
-        ]
-        strict_data = broad_data[np.isclose(broad_data['Roll_Input'], g_roll, atol=0.01)]
-        
-        if strict_data.empty:
-            readings = [0.0]
-            if not broad_data.empty:
-                valid_rolls = sorted(broad_data['Roll_Input'].unique())
-                st.warning(f"No data for Roll {g_roll}. Valid Rolls: {valid_rolls}")
-        else:
-            readings = sorted(strict_data['Reading'].unique())
-            
-        r_val = st.selectbox(f"Select Reading ({label})", readings, key=f"{key}_rd")
-
-    # Calculation Trigger
-    if r_val > 0:
-        val = get_fuel_qty(s_val, g_pitch, g_roll, r_val, acc_side)
-        if val is not None:
-            # Variance Check
-            is_alert = False
-            if est > 0:
-                diff_pct = abs(est - val) / est
-                if diff_pct > 0.05: is_alert = True
-            
-            if is_alert:
-                st.error(f"⚠️ VARIANCE ALERT (>5%)")
-                st.write(f"Calc: **{int(val)}** | Est: **{est}**")
-                st.session_state[f"{key}_qty"] = 0 # Safety: Don't add to total
-            else:
-                st.success(f"✅ Verified: {int(val)} Kgs")
-                st.session_state[f"{key}_qty"] = val # Add to total
-        else:
-            st.session_state[f"{key}_qty"] = 0
-
-# Render Tabs (This updates the session_state)
-with tab1: render_tab("Left", "left", "Main Wing Tank", "Left")
-with tab2: render_tab("Center", "center", "Center Tank", "Left")
-with tab3: render_tab("Right", "right", "Main Wing Tank", "Right")
-
-# --- 10. UPDATE THE SCOREBOARD (Cockpit Design) ---
-final_total = (
-    st.session_state.left_qty + 
-    st.session_state.center_qty + 
-    st.session_state.right_qty
-)
-
-total_color = "#00FF00" if final_total > 0 else "#888"
-
-scoreboard.markdown(f"""
-    <style>
-        .cockpit-display {{
-            background-color: #
+        acc_side = st.radio("Access Side", ["Left", "Right"], horizontal=True, key=f"{key
