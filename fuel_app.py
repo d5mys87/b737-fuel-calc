@@ -5,11 +5,11 @@ import numpy as np
 # --- 1. CONFIGURATION (Must be the very first Streamlit command) ---
 st.set_page_config(page_title="Fuel Calc (Totalizer Fix)", layout="wide")
 
-# --- 2. HEADER FUNCTION (Fixed Position Version) ---
+# --- 2. HEADER FUNCTION (Fixed Z-Index Version) ---
 def render_header():
     """
-    Renders a professional aviation-style technical header
-    pinned to the top of the viewport.
+    Renders a professional aviation-style technical header.
+    UPDATED: Lower z-index to allow access to Streamlit menus.
     """
     header_html = """
     <style>
@@ -19,25 +19,37 @@ def render_header():
             top: 0;
             left: 0;
             width: 100%;
-            height: 3.5rem; /* Fixed height to match padding push */
+            height: 3.5rem;
             background-color: #2c3e50; /* Dark Slate Blue */
             color: #ecf0f1;
-            z-index: 999999; /* Sit on top of everything */
+            
+            /* Z-INDEX FIX: 
+               Set to 50 so it sits ABOVE content but BELOW Streamlit's 
+               system buttons (which are usually z-index 100+) 
+            */
+            z-index: 50; 
+            
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
+            
+            /* PADDING FIX: 
+               Added 60px side padding so text doesn't overlap the 
+               sidebar arrow (left) or hamburger menu (right) 
+            */
+            padding: 0 60px; 
+            
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             border-bottom: 3px solid #34495e;
         }
 
-        /* 2. PUSH MAIN CONTENT DOWN SO IT ISN'T HIDDEN */
+        /* 2. PUSH MAIN CONTENT DOWN */
         .block-container {
-            padding-top: 5rem !important; /* Forces title below the fixed header */
+            padding-top: 5rem !important;
         }
 
-        /* 3. HIDE STREAMLIT'S DEFAULT TOP DECORATION (Optional) */
+        /* 3. OPTIONAL: Make Streamlit header transparent so it doesn't clash */
         header[data-testid="stHeader"] {
             background-color: transparent;
         }
@@ -70,12 +82,12 @@ def render_header():
         @media (max-width: 700px) {
             .tech-header-container {
                 height: auto;
-                padding: 10px;
+                padding: 10px 40px; /* Keep side padding for mobile menu buttons */
                 flex-direction: column;
                 gap: 8px;
             }
             .block-container {
-                padding-top: 7rem !important; /* Push content down more on mobile */
+                padding-top: 7rem !important;
             }
             .tech-text {
                 flex-direction: column;
@@ -102,11 +114,8 @@ def render_header():
     st.markdown(header_html, unsafe_allow_html=True)
 
 # --- 3. RENDER UI ELEMENTS ---
-
-# A. Render Header
 render_header()
 
-# B. Render Title 
 st.title("✈️ B737 Fuel Calculator")
 st.caption("Fuel Quantity Indication Check")
 
@@ -222,45 +231,4 @@ def render_tab(label, key, scope, default_side):
                 valid_rolls = sorted(broad_data['Roll_Input'].unique())
                 st.warning(f"No data for Roll {g_roll}. Valid Rolls: {valid_rolls}")
         else:
-            readings = sorted(strict_data['Reading'].unique())
-            
-        r_val = st.selectbox(f"Select Reading ({label})", readings, key=f"{key}_rd")
-
-    # Calculation Trigger
-    if r_val > 0:
-        val = get_fuel_qty(s_val, g_pitch, g_roll, r_val, acc_side)
-        if val is not None:
-            # Variance Check
-            is_alert = False
-            if est > 0:
-                diff_pct = abs(est - val) / est
-                if diff_pct > 0.05: is_alert = True
-            
-            if is_alert:
-                st.error(f"⚠️ VARIANCE ALERT (>5%)")
-                st.write(f"Calc: **{int(val)}** | Est: **{est}**")
-                st.session_state[f"{key}_qty"] = 0 # Safety: Don't add to total
-            else:
-                st.success(f"✅ Verified: {int(val)} Kgs")
-                st.session_state[f"{key}_qty"] = val # Add to total
-        else:
-            st.session_state[f"{key}_qty"] = 0
-
-# Render Tabs (This updates the session_state)
-with tab1: render_tab("Left", "left", "Main Wing Tank", "Left")
-with tab2: render_tab("Center", "center", "Center Tank", "Left")
-with tab3: render_tab("Right", "right", "Main Wing Tank", "Right")
-
-# --- 10. UPDATE THE SCOREBOARD (LAST STEP) ---
-final_total = (
-    st.session_state.left_qty + 
-    st.session_state.center_qty + 
-    st.session_state.right_qty
-)
-
-scoreboard.markdown(f"""
-    <div style="background-color:#1E1E1E;padding:15px;border-radius:10px;text-align:center;margin-bottom:20px;border:1px solid #444;">
-        <h3 style="color:#AAA;margin:0;font-size:14px;">TOTAL FUEL ON BOARD</h3>
-        <h1 style="color:#00FF00;font-size:48px;margin:0;">{int(final_total):,} <span style="font-size:20px;color:#888;">KGS</span></h1>
-    </div>
-""", unsafe_allow_html=True)
+            readings = sorted(strict_data['Reading'].
