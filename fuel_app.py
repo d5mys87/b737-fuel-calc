@@ -124,4 +124,8 @@ st.caption("Fuel Quantity Indication Check")
 def load_data():
     try:
         try: db = pd.read_csv('App_Ready_Fuel_Database.csv')
-        except: db = pd.read_csv('App_Ready_
+        except: db = pd.read_csv('App_Ready_Fuel_Database.csv', sep=';')
+
+        # Clean Types
+        db['Roll_Input'] = pd.to_numeric(db['Roll_Input'], errors='coerce')
+        db['Reading'] =
