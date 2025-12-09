@@ -226,9 +226,4 @@ def render_tab(label, key, scope, default_side):
         strict_data = broad_data[np.isclose(broad_data['Roll_Input'], g_roll, atol=0.01)]
         
         if strict_data.empty:
-            readings = [0.0]
-            if not broad_data.empty:
-                valid_rolls = sorted(broad_data['Roll_Input'].unique())
-                st.warning(f"No data for Roll {g_roll}. Valid Rolls: {valid_rolls}")
-        else:
-            readings = sorted(strict_data['Reading'].
+            readings = [0.
