@@ -153,4 +153,211 @@ def get_fuel_qty(stick, pitch, roll, reading, wing_side):
         (df_db['Wing_Side'] == wing_side)
     ]
     # Float match for Roll (Robust)
-    subset = subset[np.
+    subset = subset[np.isclose(subset['Roll_Input'], roll, atol=0.01)]
+    
+    if subset.empty: return None
+
+    # Exact Match
+    exact = subset[subset['Reading'] == reading]
+    if not exact.empty: return exact.iloc[0]['Fuel_Qty']
+    return None
+
+# --- 8. SIDEBAR ---
+with st.sidebar:
+    st.header("Settings")
+    
+    # Pitch - Helper function for robust sorting
+    def try_float(x):
+        try: return float(x)
+        except: return x
+
+    db_pitches = sorted(df_db['Pitch'].unique())
+    # Sort numerically if possible, otherwise alphabetically
+    db_pitches.sort(key=try_float)
+    
+    g_pitch = st.selectbox("Pitch", db_pitches)
+
+    # Roll
+    avail_rolls = sorted(df_db['Roll_Input'].dropna().unique())
+    def_idx = avail_rolls.index(10.0) if 10.0 in avail_rolls else 0
+    g_roll = st.selectbox("Roll", avail_rolls, index=def_idx)
+    
+    st.markdown("---")
+    if st.button("Reset Calculator"):
+        for k in ['left_qty', 'center_qty', 'right_qty']: 
+            st.session_state[k] = 0
+        st.rerun() 
+
+# --- 9. TABS & CALCULATION ---
+tab1, tab2, tab3 = st.tabs(["Left Wing", "Center Tank", "Right Wing"])
+
+def render_tab(label, key, scope, default_side):
+    st.subheader(f"{label} Tank")
+    
+    # Empty Checkbox
+    if st.checkbox(f"Mark {label} as EMPTY", key=f"{key}_empty"):
+        st.session_state[f"{key}_qty"] = 0
+        st.info(f"{label} Tank = 0 Kgs")
+        return 
+
+    acc_side = default_side
+    if label == "Center":
+        acc_side = st.radio("Access Side", ["Left", "Right"], horizontal=True, key=f"{key}_side")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        est = st.number_input(f"Est. Fuel ({label})", step=100, key=f"{key}_est")
+        if est > 0:
+            rec = df_recs[(df_recs['Tank_Scope']==scope) & (df_recs['Min_Kg']<=est) & (df_recs['Max_Kg']>est)]
+            if not rec.empty: st.info(f"💡 {rec.iloc[0]['Recommended_Stick']}")
+    
+    with c2:
+        if label == "Center": sticks = ["Stick 1", "Stick 2"]
+        else: sticks = ["Stick 3", "Stick 4", "Stick 5", "Stick 6", "Stick 7", "Stick 8"]
+            
+        s_val = st.selectbox(f"Stick ({label})", sticks, key=f"{key}_st")
+        
+        # Roll Detective
+        broad_data = df_db[
+            (df_db['Stick'] == s_val) & 
+            (df_db['Pitch'] == g_pitch) & 
+            (df_db['Wing_Side'] == acc_side)
+        ]
+        strict_data = broad_data[np.isclose(broad_data['Roll_Input'], g_roll, atol=0.01)]
+        
+        if strict_data.empty:
+            readings = [0.0]
+            if not broad_data.empty:
+                valid_rolls = sorted(broad_data['Roll_Input'].unique())
+                st.warning(f"No data for Roll {g_roll}. Valid Rolls: {valid_rolls}")
+        else:
+            readings = sorted(strict_data['Reading'].unique())
+            
+        r_val = st.selectbox(f"Select Reading ({label})", readings, key=f"{key}_rd")
+
+    # Calculation Trigger
+    if r_val > 0:
+        val = get_fuel_qty(s_val, g_pitch, g_roll, r_val, acc_side)
+        if val is not None:
+            # Variance Check
+            is_alert = False
+            if est > 0:
+                diff_pct = abs(est - val) / est
+                if diff_pct > 0.05: is_alert = True
+            
+            if is_alert:
+                st.error(f"⚠️ VARIANCE ALERT (>5%)")
+                st.write(f"Calc: **{int(val)}** | Est: **{est}**")
+                st.session_state[f"{key}_qty"] = 0 # Safety: Don't add to total
+            else:
+                st.success(f"✅ Verified: {int(val)} Kgs")
+                st.session_state[f"{key}_qty"] = val # Add to total
+        else:
+            st.session_state[f"{key}_qty"] = 0
+
+# Render Tabs (This updates the session_state)
+with tab1: render_tab("Left", "left", "Main Wing Tank", "Left")
+with tab2: render_tab("Center", "center", "Center Tank", "Left")
+with tab3: render_tab("Right", "right", "Main Wing Tank", "Right")
+
+# --- 10. UPDATE THE SCOREBOARD (SYNTAX SAFE VERSION) ---
+final_total = (
+    st.session_state.left_qty + 
+    st.session_state.center_qty + 
+    st.session_state.right_qty
+)
+
+total_color = "#00FF00" if final_total > 0 else "#888"
+
+# We split CSS and HTML to avoid f-string syntax errors with curly braces
+st_style = """
+<style>
+    .cockpit-display {
+        background-color: #1E1E1E;
+        border: 3px solid #444;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        font-family: 'Source Code Pro', 'Courier New', monospace;
+        color: #E0E0E0;
+        margin-bottom: 20px;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    }
+    .gauge-row {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #333;
+        padding-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    .gauge-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 100px;
+        margin: 5px;
+    }
+    .gauge-label {
+        color: #00BFFF; /* Cyan-like color */
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .gauge-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #FFFFFF;
+        background-color: #000;
+        padding: 5px 12px;
+        border-radius: 5px;
+        border: 2px solid #333;
+        min-width: 90px;
+    }
+    .total-container {
+        margin-top: 10px;
+    }
+    .total-label {
+        color: #AAA;
+        font-size: 1rem;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+    }
+    .total-value {
+        font-size: 3rem;
+        font-weight: bold;
+        color: VARIABLE_COLOR;
+        margin: 0;
+        text-shadow: 0 0 10px rgba(0,255,0,0.3);
+    }
+    .unit-label {
+        font-size: 1.5rem;
+        color: #888;
+    }
+</style>
+""".replace("VARIABLE_COLOR", total_color)
+
+st_html = f"""
+<div class="cockpit-display">
+    <div class="gauge-row">
+        <div class="gauge-container">
+            <div class="gauge-label">TANK 1</div>
+            <div class="gauge-value">{int(st.session_state.left_qty):,}</div>
+        </div>
+        <div class="gauge-container">
+            <div class="gauge-label">CTR</div>
+            <div class="gauge-value">{int(st.session_state.center_qty):,}</div>
+        </div>
+        <div class="gauge-container">
+            <div class="gauge-label">TANK 2</div>
+            <div class="gauge-value">{int(st.session_state.right_qty):,}</div>
+        </div>
+    </div>
+    <div class="total-container">
+        <div class="total-label">Total Fuel On Board</div>
+        <h1 class="total-value">{int(final_total):,} <span class="unit-label">KGS</span></h1>
+    </div>
+</div>
+"""
+
+scoreboard.markdown(st_style + st_html, unsafe_allow_html=True)
