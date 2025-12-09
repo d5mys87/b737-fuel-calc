@@ -2,11 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+# --- 1. CONFIGURATION (Must be the very first Streamlit command) ---
 st.set_page_config(page_title="Fuel Calc (Totalizer Fix)", layout="wide")
-st.title("✈️ B737 Fuel Calculator")
-import streamlit as st
 
-# --- PASTE THIS FUNCTION AT THE TOP OF YOUR FILE ---
+# --- 2. HEADER FUNCTION ---
 def render_header():
     """
     Renders a professional aviation-style technical header
@@ -19,7 +18,8 @@ def render_header():
             background-color: #2c3e50; /* Dark Slate Blue */
             color: #ecf0f1;
             padding: 15px 25px;
-            margin: -6rem -4rem 1rem -4rem; /* Negative margins to fill Streamlit top gap */
+            /* Adjusted negative margins to sit at top but not cover system menu */
+            margin: -5rem -4rem 1rem -4rem; 
             border-bottom: 4px solid #34495e;
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             display: flex;
@@ -62,6 +62,7 @@ def render_header():
                 justify-content: center;
                 text-align: center;
                 gap: 10px;
+                margin-top: -3rem; /* Less aggressive pull-up on mobile */
             }
             .tech-text {
                 flex-direction: column;
@@ -86,19 +87,16 @@ def render_header():
     """
     st.markdown(header_html, unsafe_allow_html=True)
 
-# --- MAIN APP EXECUTION ---
+# --- 3. RENDER UI ELEMENTS IN CORRECT ORDER ---
 
-# 1. Setup your page configuration first
-st.set_page_config(page_title="Fuel Calc", layout="wide")
-
-# 2. Call the header function immediately
+# A. Render Header FIRST (so it sits at the top)
 render_header()
 
-# 3. Your existing code goes here...
-st.title("Fuel Quantity Indication Check")
-# ... rest of your app
+# B. Render Title SECOND (so it sits below the header)
+st.title("✈️ B737 Fuel Calculator")
+st.caption("Fuel Quantity Indication Check")
 
-# --- 1. DATA LOADER ---
+# --- 4. DATA LOADER ---
 @st.cache_data
 def load_data():
     try:
@@ -123,16 +121,16 @@ if data_res[0] is None:
     st.stop()
 df_db, df_recs = data_res
 
-# --- 2. SESSION STATE ---
+# --- 5. SESSION STATE ---
 # Ensure these exist so the totalizer doesn't crash on first load
 for k in ['left_qty', 'center_qty', 'right_qty']:
     if k not in st.session_state: st.session_state[k] = 0
 
-# --- 3. PLACEHOLDER FOR TOTALIZER ---
+# --- 6. PLACEHOLDER FOR TOTALIZER ---
 # We reserve this spot at the top, but we will fill it at the BOTTOM of the script
 scoreboard = st.empty()
 
-# --- 4. LOGIC ---
+# --- 7. LOGIC ---
 def get_fuel_qty(stick, pitch, roll, reading, wing_side):
     subset = df_db[
         (df_db['Stick'] == stick) &
@@ -149,7 +147,7 @@ def get_fuel_qty(stick, pitch, roll, reading, wing_side):
     if not exact.empty: return exact.iloc[0]['Fuel_Qty']
     return None
 
-# --- 5. SIDEBAR ---
+# --- 8. SIDEBAR ---
 with st.sidebar:
     st.header("Settings")
     
@@ -170,7 +168,7 @@ with st.sidebar:
         for k in ['left_qty', 'center_qty', 'right_qty']: st.session_state[k] = 0
         st.experimental_rerun()
 
-# --- 6. TABS & CALCULATION ---
+# --- 9. TABS & CALCULATION ---
 tab1, tab2, tab3 = st.tabs(["Left Wing", "Center Tank", "Right Wing"])
 
 def render_tab(label, key, scope, default_side):
@@ -242,15 +240,13 @@ with tab1: render_tab("Left", "left", "Main Wing Tank", "Left")
 with tab2: render_tab("Center", "center", "Center Tank", "Left")
 with tab3: render_tab("Right", "right", "Main Wing Tank", "Right")
 
-# --- 7. UPDATE THE SCOREBOARD (LAST STEP) ---
-# Now that session_state is updated, we calculate the sum and push it to the top
+# --- 10. UPDATE THE SCOREBOARD (LAST STEP) ---
 final_total = (
     st.session_state.left_qty + 
     st.session_state.center_qty + 
     st.session_state.right_qty
 )
 
-# This updates the empty box we created at line 39
 scoreboard.markdown(f"""
     <div style="background-color:#1E1E1E;padding:15px;border-radius:10px;text-align:center;margin-bottom:20px;border:1px solid #444;">
         <h3 style="color:#AAA;margin:0;font-size:14px;">TOTAL FUEL ON BOARD</h3>
