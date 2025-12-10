@@ -9,7 +9,7 @@ LOGO_FILENAME = "logo.png"
 GITHUB_USER = "d5mys87"
 REPO_NAME = "b737-fuel-calc"
 BRANCH = "main"
-LOGO_URL = f"https://raw.githubusercontent.com/d5mys/b737-fuel-calc/blob/main/logo.png"
+LOGO_URL = "https://raw.githubusercontent.com/d5mys87/b737-fuel-calc/main/logo.png"
 
 # 2. SET PAGE CONFIG (Must be the first Streamlit command)
 # Check if you already have 'st.set_page_config' further down. 
@@ -327,5 +327,6 @@ st_html = f"""
     <div class="total-value">{int(final_total):,} <span style="font-size:1rem;color:#888;">KGS</span></div>
 </div>
 """
+
 
 scoreboard.markdown(st_style + st_html, unsafe_allow_html=True)
