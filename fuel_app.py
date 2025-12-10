@@ -3,17 +3,45 @@ import pandas as pd
 import numpy as np
 import os
 
-# --- 1. CONFIGURATION ---
-if os.path.exists("logo.png"):
-    app_icon = "logo.png"
-else:
-    app_icon = "✈️"
+# ================= BEGIN BRANDING BLOCK =================
+# 1. SETUP & CONFIGURATION
+LOGO_FILENAME = "logo.png"  
+GITHUB_USER = "d5mys87"
+REPO_NAME = "b737-fuel-calc"
+BRANCH = "main"
+LOGO_URL = f"https://raw.githubusercontent.com/d5mys/b737-fuel-calc/blob/main/logo.png"
 
+# 2. SET PAGE CONFIG (Must be the first Streamlit command)
+# Check if you already have 'st.set_page_config' further down. 
+# If you do, DELETE IT there and use this one instead.
 st.set_page_config(
-    page_title="B737 Fuel Dip",
-    page_icon=app_icon,
+    page_title="B737 Fuel Calc",
+    page_icon=LOGO_URL,
     layout="wide"
 )
+
+# 3. HIDE STREAMLIT BRANDING (CSS)
+hide_streamlit_style = """
+<style>
+    footer {visibility: hidden;}
+    [data-testid="stConnectionStatus"] {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+    .block-container {padding-top: 1rem;}
+</style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+# 4. INJECT APP ICONS FOR MOBILE
+st.markdown(
+    f"""
+    <head>
+        <link rel="apple-touch-icon" href="{LOGO_URL}">
+        <link rel="icon" type="image/png" href="{LOGO_URL}">
+    </head>
+    """,
+    unsafe_allow_html=True
+)
+# ================= END BRANDING BLOCK =================
 
 # --- 2. HEADER FUNCTION ---
 def render_header():
