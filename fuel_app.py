@@ -32,32 +32,76 @@ hide_streamlit_style = """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # 4. INJECT PWA META TAGS AND MANIFEST FOR INSTALLABLE WEB APP
+# Use JavaScript to override Streamlit's default manifest and icons
 MANIFEST_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{REPO_NAME}/{BRANCH}/manifest.json"
 
-st.markdown(
-    f"""
-    <head>
-        <!-- PWA Manifest -->
-        <link rel="manifest" href="{MANIFEST_URL}">
+pwa_override_script = f"""
+<script>
+(function() {{
+    // Wait for DOM to be ready
+    function overridePWA() {{
+        // Remove existing manifest links
+        document.querySelectorAll('link[rel="manifest"]').forEach(el => el.remove());
 
-        <!-- iOS PWA Support -->
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="apple-mobile-web-app-title" content="B737 Fuel">
-        <link rel="apple-touch-icon" href="{LOGO_URL}">
+        // Remove existing apple-touch-icon links
+        document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(el => el.remove());
 
-        <!-- Android/Chrome PWA Support -->
-        <meta name="mobile-web-app-capable" content="yes">
-        <meta name="theme-color" content="#2c3e50">
-        <meta name="application-name" content="B737 Fuel Calculator">
+        // Remove existing favicons
+        document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(el => el.remove());
 
-        <!-- Standard favicon -->
-        <link rel="icon" type="image/png" href="{LOGO_URL}">
-        <link rel="shortcut icon" href="{LOGO_URL}">
-    </head>
-    """,
-    unsafe_allow_html=True
-)
+        // Add our manifest
+        var manifest = document.createElement('link');
+        manifest.rel = 'manifest';
+        manifest.href = '{MANIFEST_URL}';
+        document.head.appendChild(manifest);
+
+        // Add our favicon
+        var favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        favicon.type = 'image/png';
+        favicon.href = '{LOGO_URL}';
+        document.head.appendChild(favicon);
+
+        // Add apple-touch-icon
+        var appleIcon = document.createElement('link');
+        appleIcon.rel = 'apple-touch-icon';
+        appleIcon.href = '{LOGO_URL}';
+        document.head.appendChild(appleIcon);
+
+        // Add meta tags for PWA
+        var metaTags = [
+            {{'name': 'apple-mobile-web-app-capable', 'content': 'yes'}},
+            {{'name': 'apple-mobile-web-app-status-bar-style', 'content': 'black-translucent'}},
+            {{'name': 'apple-mobile-web-app-title', 'content': 'B737 Fuel'}},
+            {{'name': 'mobile-web-app-capable', 'content': 'yes'}},
+            {{'name': 'application-name', 'content': 'B737 Fuel'}},
+            {{'name': 'theme-color', 'content': '#2c3e50'}}
+        ];
+
+        metaTags.forEach(function(tag) {{
+            // Remove existing meta tag if present
+            var existing = document.querySelector('meta[name="' + tag.name + '"]');
+            if (existing) existing.remove();
+
+            var meta = document.createElement('meta');
+            meta.name = tag.name;
+            meta.content = tag.content;
+            document.head.appendChild(meta);
+        }});
+
+        // Update document title
+        document.title = 'B737 Fuel Calc';
+    }}
+
+    // Run immediately and also after a short delay to ensure Streamlit hasn't re-added its defaults
+    overridePWA();
+    setTimeout(overridePWA, 100);
+    setTimeout(overridePWA, 500);
+    setTimeout(overridePWA, 1000);
+}})();
+</script>
+"""
+st.markdown(pwa_override_script, unsafe_allow_html=True)
 
 # 5. PWA INSTALL PROMPT BANNER
 pwa_install_css = """
