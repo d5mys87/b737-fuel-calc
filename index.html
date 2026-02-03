@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B737 Fuel Calc</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="B737 Fuel">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="B737 Fuel">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="description" content="Fuel Quantity Indication Check for Boeing 737 aircraft">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: #0e1117;
+            color: #fafafa;
+            min-height: 100vh;
+            padding-top: 60px;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 56px;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            border-bottom: 3px solid #34495e;
+        }
+
+        .ref-badge {
+            background-color: #34495e;
+            color: #bdc3c7;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border: 1px solid #46637f;
+        }
+
+        .tech-text {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #ffffff;
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .title {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .caption {
+            color: #888;
+            margin-bottom: 20px;
+        }
+
+        /* Cockpit Display */
+        .cockpit-display {
+            background-color: #1E1E1E;
+            border: 3px solid #444;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            font-family: monospace;
+            color: #E0E0E0;
+            margin-bottom: 20px;
+        }
+
+        .gauge-row {
+            display: flex;
+            justify-content: space-around;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .gauge-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 5px;
+            min-width: 80px;
+        }
+
+        .gauge-label {
+            color: #00BFFF;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        .gauge-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #FFF;
+            background-color: #000;
+            padding: 5px 15px;
+            border-radius: 5px;
+            border: 2px solid #333;
+            min-width: 80px;
+        }
+
+        .total-label {
+            margin-top: 15px;
+            color: #888;
+        }
+
+        .total-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .total-value.has-fuel {
+            color: #00FF00;
+        }
+
+        .total-value.no-fuel {
+            color: #888;
+        }
+
+        .unit {
+            font-size: 1rem;
+            color: #888;
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            background-color: #1a1a2e;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .settings-title {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: #00BFFF;
+        }
+
+        .settings-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .setting-group {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .setting-group select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background-color: #262730;
+            color: #fafafa;
+            font-size: 1rem;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #333;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #888;
+            font-size: 1rem;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: #fff;
+        }
+
+        .tab.active {
+            color: #00BFFF;
+            border-bottom-color: #00BFFF;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Tank Panel */
+        .tank-panel {
+            background-color: #1a1a2e;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .tank-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-row {
+            margin-bottom: 15px;
+        }
+
+        .checkbox-row label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #00BFFF;
+        }
+
+        .radio-row {
+            margin-bottom: 15px;
+        }
+
+        .radio-row span {
+            margin-right: 15px;
+            color: #aaa;
+        }
+
+        .radio-row label {
+            margin-right: 20px;
+            cursor: pointer;
+        }
+
+        .radio-row input[type="radio"] {
+            margin-right: 5px;
+            accent-color: #00BFFF;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .input-group {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background-color: #262730;
+            color: #fafafa;
+            font-size: 1rem;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 12px 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-size: 0.95rem;
+        }
+
+        .alert-info {
+            background-color: #1e3a5f;
+            border: 1px solid #2980b9;
+            color: #85c1e9;
+        }
+
+        .alert-success {
+            background-color: #1e5f3a;
+            border: 1px solid #27ae60;
+            color: #82e0aa;
+        }
+
+        .alert-error {
+            background-color: #5f1e1e;
+            border: 1px solid #c0392b;
+            color: #f1948a;
+        }
+
+        .alert-warning {
+            background-color: #5f4b1e;
+            border: 1px solid #f39c12;
+            color: #f9e79f;
+        }
+
+        /* PWA Install Banner */
+        .pwa-install-banner {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            border: 2px solid #46637f;
+        }
+
+        .pwa-install-banner:hover {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #888;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                height: auto;
+                padding: 10px;
+                gap: 8px;
+            }
+
+            body {
+                padding-top: 90px;
+            }
+
+            .tech-text {
+                font-size: 0.7rem;
+            }
+
+            .title {
+                font-size: 1.4rem;
+            }
+
+            .tab {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            .gauge-value {
+                font-size: 1.2rem;
+                padding: 5px 10px;
+            }
+
+            .total-value {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="ref-badge">Info For Reference Only</div>
+        <div class="tech-text">
+            <span>FMSM 12-11-03</span>
+            <span>|</span>
+            <span>AMM-28-41-00</span>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h1 class="title">B737 Fuel Calculator</h1>
+        <p class="caption">Fuel Quantity Indication Check</p>
+
+        <!-- Cockpit Display -->
+        <div class="cockpit-display">
+            <div class="gauge-row">
+                <div class="gauge-container">
+                    <div class="gauge-label">TANK 1</div>
+                    <div class="gauge-value" id="left-display">0</div>
+                </div>
+                <div class="gauge-container">
+                    <div class="gauge-label">CTR</div>
+                    <div class="gauge-value" id="center-display">0</div>
+                </div>
+                <div class="gauge-container">
+                    <div class="gauge-label">TANK 2</div>
+                    <div class="gauge-value" id="right-display">0</div>
+                </div>
+            </div>
+            <div class="total-label">TOTAL FUEL</div>
+            <div class="total-value no-fuel" id="total-display">0 <span class="unit">KGS</span></div>
+        </div>
+
+        <!-- Settings -->
+        <div class="settings-panel">
+            <div class="settings-title">Settings</div>
+            <div class="settings-row">
+                <div class="setting-group">
+                    <label for="pitch-select">Pitch</label>
+                    <select id="pitch-select"></select>
+                </div>
+                <div class="setting-group">
+                    <label for="roll-select">Roll</label>
+                    <select id="roll-select"></select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="left">Left Wing</button>
+            <button class="tab" data-tab="center">Center</button>
+            <button class="tab" data-tab="right">Right Wing</button>
+        </div>
+
+        <!-- Left Wing Tab -->
+        <div class="tab-content active" id="tab-left">
+            <div class="tank-panel">
+                <h2 class="tank-title">Left Tank</h2>
+                <div class="checkbox-row">
+                    <label>
+                        <input type="checkbox" id="left-empty" checked>
+                        Mark Left EMPTY
+                    </label>
+                </div>
+                <div id="left-inputs" style="display:none;">
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="left-est">Est. Left (kg)</label>
+                            <input type="number" id="left-est" value="0" step="100">
+                            <div id="left-rec" class="alert alert-info" style="display:none;"></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="left-stick">Stick</label>
+                            <select id="left-stick"></select>
+                        </div>
+                    </div>
+                    <div class="input-row" style="margin-top:15px;">
+                        <div class="input-group">
+                            <label for="left-reading">Reading</label>
+                            <select id="left-reading"></select>
+                        </div>
+                    </div>
+                    <div id="left-result"></div>
+                </div>
+                <div id="left-empty-msg" class="alert alert-info">Left Tank = 0 Kgs</div>
+            </div>
+        </div>
+
+        <!-- Center Tab -->
+        <div class="tab-content" id="tab-center">
+            <div class="tank-panel">
+                <h2 class="tank-title">Center Tank</h2>
+                <div class="checkbox-row">
+                    <label>
+                        <input type="checkbox" id="center-empty" checked>
+                        Mark Center EMPTY
+                    </label>
+                </div>
+                <div id="center-inputs" style="display:none;">
+                    <div class="radio-row">
+                        <span>Access Side:</span>
+                        <label><input type="radio" name="center-side" value="Left" checked> Left</label>
+                        <label><input type="radio" name="center-side" value="Right"> Right</label>
+                    </div>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="center-est">Est. Center (kg)</label>
+                            <input type="number" id="center-est" value="0" step="100">
+                            <div id="center-rec" class="alert alert-info" style="display:none;"></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="center-stick">Stick</label>
+                            <select id="center-stick"></select>
+                        </div>
+                    </div>
+                    <div class="input-row" style="margin-top:15px;">
+                        <div class="input-group">
+                            <label for="center-reading">Reading</label>
+                            <select id="center-reading"></select>
+                        </div>
+                    </div>
+                    <div id="center-result"></div>
+                </div>
+                <div id="center-empty-msg" class="alert alert-info">Center Tank = 0 Kgs</div>
+            </div>
+        </div>
+
+        <!-- Right Wing Tab -->
+        <div class="tab-content" id="tab-right">
+            <div class="tank-panel">
+                <h2 class="tank-title">Right Tank</h2>
+                <div class="checkbox-row">
+                    <label>
+                        <input type="checkbox" id="right-empty" checked>
+                        Mark Right EMPTY
+                    </label>
+                </div>
+                <div id="right-inputs" style="display:none;">
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="right-est">Est. Right (kg)</label>
+                            <input type="number" id="right-est" value="0" step="100">
+                            <div id="right-rec" class="alert alert-info" style="display:none;"></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="right-stick">Stick</label>
+                            <select id="right-stick"></select>
+                        </div>
+                    </div>
+                    <div class="input-row" style="margin-top:15px;">
+                        <div class="input-group">
+                            <label for="right-reading">Reading</label>
+                            <select id="right-reading"></select>
+                        </div>
+                    </div>
+                    <div id="right-result"></div>
+                </div>
+                <div id="right-empty-msg" class="alert alert-info">Right Tank = 0 Kgs</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA Install Banner -->
+    <div class="pwa-install-banner" id="pwa-banner" onclick="installPWA()">
+        <span>+</span>
+        <span>Install App</span>
+    </div>
+
+    <script>
+        // Global data
+        let fuelDatabase = [];
+        let recommendations = [];
+        let fuelQty = { left: 0, center: 0, right: 0 };
+
+        // Parse CSV
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const row = {};
+                headers.forEach((h, idx) => {
+                    row[h] = values[idx] ? values[idx].trim() : '';
+                });
+                data.push(row);
+            }
+            return data;
+        }
+
+        // Load data
+        async function loadData() {
+            try {
+                const [dbResponse, recResponse] = await Promise.all([
+                    fetch('App_Ready_Fuel_Database.csv'),
+                    fetch('Master_Stick_Recommendations.csv')
+                ]);
+
+                const dbText = await dbResponse.text();
+                const recText = await recResponse.text();
+
+                fuelDatabase = parseCSV(dbText);
+                recommendations = parseCSV(recText);
+
+                // Convert numeric fields
+                fuelDatabase.forEach(row => {
+                    row.Reading = parseFloat(row.Reading) || 0;
+                    row.Fuel_Qty = parseFloat(row.Fuel_Qty) || 0;
+                    row.Roll_Input = parseFloat(row.Roll_Input) || 0;
+                });
+
+                recommendations.forEach(row => {
+                    row.Min_Kg = parseFloat(row.Min_Kg) || 0;
+                    row.Max_Kg = parseFloat(row.Max_Kg) || 0;
+                });
+
+                initializeUI();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.querySelector('.container').innerHTML =
+                    '<div class="alert alert-error">Failed to load data. Please refresh.</div>';
+            }
+        }
+
+        // Initialize UI
+        function initializeUI() {
+            // Populate pitch dropdown
+            const pitches = [...new Set(fuelDatabase.map(r => r.Pitch))].sort();
+            const pitchSelect = document.getElementById('pitch-select');
+            let defaultPitchIdx = 0;
+            pitches.forEach((p, idx) => {
+                if (p.includes('K')) defaultPitchIdx = idx;
+                pitchSelect.innerHTML += `<option value="${p}">${p}</option>`;
+            });
+            pitchSelect.selectedIndex = defaultPitchIdx;
+
+            // Populate roll dropdown
+            const rolls = [...new Set(fuelDatabase.map(r => r.Roll_Input))].sort((a, b) => a - b);
+            const rollSelect = document.getElementById('roll-select');
+            let defaultRollIdx = 0;
+            rolls.forEach((r, idx) => {
+                if (r === 10) defaultRollIdx = idx;
+                rollSelect.innerHTML += `<option value="${r}">${r}</option>`;
+            });
+            rollSelect.selectedIndex = defaultRollIdx;
+
+            // Populate stick dropdowns
+            populateSticks('left', ['Stick 3', 'Stick 4', 'Stick 5', 'Stick 6', 'Stick 7', 'Stick 8'], 5);
+            populateSticks('center', ['Stick 1', 'Stick 2'], 0);
+            populateSticks('right', ['Stick 3', 'Stick 4', 'Stick 5', 'Stick 6', 'Stick 7', 'Stick 8'], 5);
+
+            // Setup event listeners
+            setupEventListeners();
+
+            // Initial readings update
+            updateReadings('left');
+            updateReadings('center');
+            updateReadings('right');
+        }
+
+        function populateSticks(tank, sticks, defaultIdx) {
+            const select = document.getElementById(`${tank}-stick`);
+            sticks.forEach(s => {
+                select.innerHTML += `<option value="${s}">${s}</option>`;
+            });
+            select.selectedIndex = defaultIdx;
+        }
+
+        function setupEventListeners() {
+            // Tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+                });
+            });
+
+            // Empty checkboxes
+            ['left', 'center', 'right'].forEach(tank => {
+                document.getElementById(`${tank}-empty`).addEventListener('change', (e) => {
+                    const inputs = document.getElementById(`${tank}-inputs`);
+                    const emptyMsg = document.getElementById(`${tank}-empty-msg`);
+
+                    if (e.target.checked) {
+                        inputs.style.display = 'none';
+                        emptyMsg.style.display = 'block';
+                        fuelQty[tank] = 0;
+                        updateDisplay();
+                    } else {
+                        inputs.style.display = 'block';
+                        emptyMsg.style.display = 'none';
+                        calculate(tank);
+                    }
+                });
+            });
+
+            // Pitch/Roll changes
+            document.getElementById('pitch-select').addEventListener('change', () => {
+                updateReadings('left');
+                updateReadings('center');
+                updateReadings('right');
+            });
+
+            document.getElementById('roll-select').addEventListener('change', () => {
+                updateReadings('left');
+                updateReadings('center');
+                updateReadings('right');
+            });
+
+            // Center side radio
+            document.querySelectorAll('input[name="center-side"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    updateReadings('center');
+                });
+            });
+
+            // Stick changes
+            ['left', 'center', 'right'].forEach(tank => {
+                document.getElementById(`${tank}-stick`).addEventListener('change', () => {
+                    updateReadings(tank);
+                });
+
+                document.getElementById(`${tank}-reading`).addEventListener('change', () => {
+                    calculate(tank);
+                });
+
+                document.getElementById(`${tank}-est`).addEventListener('input', () => {
+                    updateRecommendation(tank);
+                    calculate(tank);
+                });
+            });
+        }
+
+        function getWingSide(tank) {
+            if (tank === 'left') return 'Left';
+            if (tank === 'right') return 'Right';
+            // Center uses radio selection
+            return document.querySelector('input[name="center-side"]:checked').value;
+        }
+
+        function updateReadings(tank) {
+            const pitch = document.getElementById('pitch-select').value;
+            const roll = parseFloat(document.getElementById('roll-select').value);
+            const stick = document.getElementById(`${tank}-stick`).value;
+            const wingSide = getWingSide(tank);
+
+            // Filter database
+            const filtered = fuelDatabase.filter(row =>
+                row.Stick === stick &&
+                row.Pitch === pitch &&
+                row.Wing_Side === wingSide &&
+                Math.abs(row.Roll_Input - roll) < 0.02
+            );
+
+            const readings = [...new Set(filtered.map(r => r.Reading))].sort((a, b) => a - b);
+
+            const select = document.getElementById(`${tank}-reading`);
+            select.innerHTML = '';
+
+            if (readings.length === 0) {
+                select.innerHTML = '<option value="0">No data</option>';
+                document.getElementById(`${tank}-result`).innerHTML =
+                    `<div class="alert alert-warning">No data for Roll ${roll}</div>`;
+            } else {
+                readings.forEach(r => {
+                    select.innerHTML += `<option value="${r}">${r}</option>`;
+                });
+                document.getElementById(`${tank}-result`).innerHTML = '';
+            }
+
+            calculate(tank);
+        }
+
+        function updateRecommendation(tank) {
+            const est = parseInt(document.getElementById(`${tank}-est`).value) || 0;
+            const scope = tank === 'center' ? 'Center Tank' : 'Main Wing Tank';
+            const recEl = document.getElementById(`${tank}-rec`);
+
+            if (est > 0) {
+                const rec = recommendations.find(r =>
+                    r.Tank_Scope === scope &&
+                    r.Min_Kg <= est &&
+                    r.Max_Kg > est
+                );
+
+                if (rec) {
+                    recEl.textContent = rec.Recommended_Stick;
+                    recEl.style.display = 'block';
+                } else {
+                    recEl.style.display = 'none';
+                }
+            } else {
+                recEl.style.display = 'none';
+            }
+        }
+
+        function calculate(tank) {
+            if (document.getElementById(`${tank}-empty`).checked) {
+                fuelQty[tank] = 0;
+                updateDisplay();
+                return;
+            }
+
+            const pitch = document.getElementById('pitch-select').value;
+            const roll = parseFloat(document.getElementById('roll-select').value);
+            const stick = document.getElementById(`${tank}-stick`).value;
+            const reading = parseFloat(document.getElementById(`${tank}-reading`).value);
+            const est = parseInt(document.getElementById(`${tank}-est`).value) || 0;
+            const wingSide = getWingSide(tank);
+
+            const resultEl = document.getElementById(`${tank}-result`);
+
+            if (reading === 0) {
+                fuelQty[tank] = 0;
+                updateDisplay();
+                return;
+            }
+
+            // Find fuel quantity
+            const match = fuelDatabase.find(row =>
+                row.Stick === stick &&
+                row.Pitch === pitch &&
+                row.Wing_Side === wingSide &&
+                Math.abs(row.Roll_Input - roll) < 0.02 &&
+                Math.abs(row.Reading - reading) < 0.02
+            );
+
+            if (match) {
+                const fuelVal = match.Fuel_Qty;
+                const limitKg = tank === 'center' ? 520 : 160;
+
+                let isAlert = false;
+                if (est > 0) {
+                    const diff = Math.abs(est - fuelVal);
+                    if (diff > limitKg) isAlert = true;
+                }
+
+                if (isAlert) {
+                    resultEl.innerHTML = `
+                        <div class="alert alert-error">
+                            VARIANCE > ${limitKg} KGS<br>
+                            Calc: <strong>${Math.round(fuelVal)}</strong> | Est: <strong>${est}</strong>
+                        </div>
+                    `;
+                    fuelQty[tank] = 0;
+                } else {
+                    resultEl.innerHTML = `
+                        <div class="alert alert-success">
+                            Verified: ${Math.round(fuelVal).toLocaleString()} kg
+                        </div>
+                    `;
+                    fuelQty[tank] = fuelVal;
+                }
+            } else {
+                resultEl.innerHTML = '<div class="alert alert-warning">No match found</div>';
+                fuelQty[tank] = 0;
+            }
+
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            document.getElementById('left-display').textContent = Math.round(fuelQty.left).toLocaleString();
+            document.getElementById('center-display').textContent = Math.round(fuelQty.center).toLocaleString();
+            document.getElementById('right-display').textContent = Math.round(fuelQty.right).toLocaleString();
+
+            const total = fuelQty.left + fuelQty.center + fuelQty.right;
+            const totalEl = document.getElementById('total-display');
+            totalEl.innerHTML = `${Math.round(total).toLocaleString()} <span class="unit">KGS</span>`;
+
+            if (total > 0) {
+                totalEl.classList.add('has-fuel');
+                totalEl.classList.remove('no-fuel');
+            } else {
+                totalEl.classList.remove('has-fuel');
+                totalEl.classList.add('no-fuel');
+            }
+        }
+
+        // PWA Install
+        let deferredPrompt;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('pwa-banner').style.display = 'flex';
+        });
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        document.getElementById('pwa-banner').style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+
+        window.addEventListener('appinstalled', () => {
+            document.getElementById('pwa-banner').style.display = 'none';
+        });
+
+        // Hide banner if standalone
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            document.getElementById('pwa-banner').style.display = 'none';
+        }
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => {
+                console.log('SW registration failed:', err);
+            });
+        }
+
+        // Load data on startup
+        loadData();
+    </script>
+</body>
+</html>

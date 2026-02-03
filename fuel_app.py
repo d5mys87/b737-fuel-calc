@@ -31,16 +31,187 @@ hide_streamlit_style = """
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# 4. INJECT APP ICONS FOR MOBILE
-st.markdown(
-    f"""
-    <head>
-        <link rel="apple-touch-icon" href="{LOGO_URL}">
-        <link rel="icon" type="image/png" href="{LOGO_URL}">
-    </head>
-    """,
-    unsafe_allow_html=True
-)
+# 4. INJECT PWA META TAGS AND MANIFEST FOR INSTALLABLE WEB APP
+# Embed manifest directly as blob URL to bypass CORS and Streamlit's manifest
+pwa_override_script = f"""
+<script>
+(function() {{
+    // Create manifest as blob URL (bypasses external loading issues)
+    var manifestData = {{
+        "name": "B737 Fuel Calculator",
+        "short_name": "B737 Fuel",
+        "description": "Fuel Quantity Indication Check for Boeing 737 aircraft",
+        "start_url": window.location.href.split('?')[0],
+        "scope": window.location.origin + "/",
+        "display": "standalone",
+        "background_color": "#1E1E1E",
+        "theme_color": "#2c3e50",
+        "orientation": "any",
+        "icons": [{{
+            "src": "{LOGO_URL}",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }}]
+    }};
+
+    var manifestBlob = new Blob([JSON.stringify(manifestData)], {{type: 'application/json'}});
+    var manifestURL = URL.createObjectURL(manifestBlob);
+
+    function overridePWA() {{
+        // Remove ALL existing manifest links
+        document.querySelectorAll('link[rel="manifest"]').forEach(function(el) {{
+            el.parentNode.removeChild(el);
+        }});
+
+        // Remove existing apple-touch-icon links
+        document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(function(el) {{
+            el.parentNode.removeChild(el);
+        }});
+
+        // Remove existing favicons
+        document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(function(el) {{
+            el.parentNode.removeChild(el);
+        }});
+
+        // Add our manifest (blob URL)
+        var manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = manifestURL;
+        document.head.insertBefore(manifestLink, document.head.firstChild);
+
+        // Add our favicon
+        var favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        favicon.type = 'image/png';
+        favicon.sizes = '512x512';
+        favicon.href = '{LOGO_URL}';
+        document.head.appendChild(favicon);
+
+        // Add apple-touch-icon (critical for iOS)
+        var appleIcon = document.createElement('link');
+        appleIcon.rel = 'apple-touch-icon';
+        appleIcon.sizes = '180x180';
+        appleIcon.href = '{LOGO_URL}';
+        document.head.appendChild(appleIcon);
+
+        // Add/update meta tags for PWA
+        var metaTags = [
+            {{'name': 'apple-mobile-web-app-capable', 'content': 'yes'}},
+            {{'name': 'apple-mobile-web-app-status-bar-style', 'content': 'black-translucent'}},
+            {{'name': 'apple-mobile-web-app-title', 'content': 'B737 Fuel'}},
+            {{'name': 'mobile-web-app-capable', 'content': 'yes'}},
+            {{'name': 'application-name', 'content': 'B737 Fuel'}},
+            {{'name': 'theme-color', 'content': '#2c3e50'}}
+        ];
+
+        metaTags.forEach(function(tag) {{
+            var existing = document.querySelector('meta[name="' + tag.name + '"]');
+            if (existing) existing.parentNode.removeChild(existing);
+            var meta = document.createElement('meta');
+            meta.name = tag.name;
+            meta.content = tag.content;
+            document.head.appendChild(meta);
+        }});
+
+        document.title = 'B737 Fuel Calc';
+    }}
+
+    // Override aggressively - Streamlit may re-inject its manifest
+    overridePWA();
+    setTimeout(overridePWA, 50);
+    setTimeout(overridePWA, 200);
+    setTimeout(overridePWA, 500);
+    setTimeout(overridePWA, 1000);
+    setTimeout(overridePWA, 2000);
+
+    // Also observe for any new manifest links being added
+    var observer = new MutationObserver(function(mutations) {{
+        mutations.forEach(function(mutation) {{
+            mutation.addedNodes.forEach(function(node) {{
+                if (node.tagName === 'LINK' && node.rel === 'manifest' && node.href !== manifestURL) {{
+                    node.parentNode.removeChild(node);
+                    overridePWA();
+                }}
+            }});
+        }});
+    }});
+    observer.observe(document.head, {{ childList: true }});
+}})();
+</script>
+"""
+st.markdown(pwa_override_script, unsafe_allow_html=True)
+
+# 5. PWA INSTALL PROMPT BANNER
+pwa_install_css = """
+<style>
+    .pwa-install-banner {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #2c3e50, #34495e);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 30px;
+        font-family: sans-serif;
+        font-size: 0.9rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        border: 2px solid #46637f;
+    }
+    .pwa-install-banner:hover {
+        background: linear-gradient(135deg, #34495e, #2c3e50);
+    }
+    .pwa-install-icon {
+        font-size: 1.2rem;
+    }
+</style>
+
+<div class="pwa-install-banner" id="pwa-banner" onclick="installPWA()">
+    <span class="pwa-install-icon">+</span>
+    <span>Install App</span>
+</div>
+
+<script>
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('pwa-banner').style.display = 'flex';
+});
+
+function installPWA() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                document.getElementById('pwa-banner').style.display = 'none';
+            }
+            deferredPrompt = null;
+        });
+    }
+}
+
+window.addEventListener('appinstalled', () => {
+    document.getElementById('pwa-banner').style.display = 'none';
+});
+
+// Hide banner if already installed (standalone mode)
+if (window.matchMedia('(display-mode: standalone)').matches) {
+    document.addEventListener('DOMContentLoaded', function() {
+        var banner = document.getElementById('pwa-banner');
+        if (banner) banner.style.display = 'none';
+    });
+}
+</script>
+"""
+st.markdown(pwa_install_css, unsafe_allow_html=True)
 # ================= END BRANDING BLOCK =================
 
 # --- 2. HEADER FUNCTION ---

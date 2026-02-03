@@ -1,0 +1,21 @@
+{
+  "name": "B737 Fuel Calculator",
+  "short_name": "B737 Fuel",
+  "description": "Fuel Quantity Indication Check for Boeing 737 aircraft",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0e1117",
+  "theme_color": "#2c3e50",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "en"
+}
