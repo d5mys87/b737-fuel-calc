@@ -24,7 +24,8 @@ b737-fuel-calc/
 ├── fuel_app.py                     # Main Streamlit application (single-file architecture)
 ├── App_Ready_Fuel_Database.csv     # Fuel lookup database (~65K rows)
 ├── Master_Stick_Recommendations.csv # Stick recommendations by fuel range (12 rows)
-├── logo.png                        # Application branding logo
+├── manifest.json                   # PWA manifest for installable web app
+├── logo.png                        # Application branding logo & PWA icon
 ├── requirements.txt                # Python dependencies
 ├── CLAUDE.md                       # This file
 └── .devcontainer/
@@ -42,6 +43,7 @@ b737-fuel-calc/
 | Data Processing | Pandas, NumPy |
 | Deployment | GitHub Codespaces, Docker |
 | Styling | Custom CSS via Streamlit markdown |
+| PWA Support | Web App Manifest, installable on mobile/desktop |
 
 ---
 
@@ -69,20 +71,21 @@ streamlit run fuel_app.py --server.enableCORS false --server.enableXsrfProtectio
 
 ## Key Files and Responsibilities
 
-### `fuel_app.py` (332 lines)
+### `fuel_app.py` (~420 lines)
 Single-file monolithic application with logical sections:
 
 | Lines | Section | Purpose |
 |-------|---------|---------|
-| 1-44 | Branding Block | Page config, CSS injection, mobile icons |
-| 46-88 | Header | Fixed header with compliance badges |
-| 89-92 | Title | Main page headline |
-| 94-120 | Data Loading | Cached CSV loading with type coercion |
-| 122-127 | Session State | Fuel quantity tracking across tabs |
-| 129-145 | Core Logic | `get_fuel_qty()` function with fuzzy matching |
-| 147-175 | Sidebar | Pitch and roll selection controls |
-| 177-268 | Main UI Tabs | Three-tab interface for Left/Center/Right tanks |
-| 270-332 | Scoreboard | Cockpit-style fuel gauge display |
+| 1-32 | Page Config | Imports, branding constants, Streamlit page setup |
+| 34-100 | PWA Support | Manifest link, meta tags, install prompt banner |
+| 102-132 | Header | Fixed header with compliance badges |
+| 134-137 | Title | Main page headline |
+| 139-165 | Data Loading | Cached CSV loading with type coercion |
+| 167-172 | Session State | Fuel quantity tracking across tabs |
+| 174-190 | Core Logic | `get_fuel_qty()` function with fuzzy matching |
+| 192-220 | Sidebar | Pitch and roll selection controls |
+| 222-313 | Main UI Tabs | Three-tab interface for Left/Center/Right tanks |
+| 315-420 | Scoreboard | Cockpit-style fuel gauge display |
 
 ### Data Files
 
@@ -180,7 +183,7 @@ Defaults:
 Update `App_Ready_Fuel_Database.csv` with new rows. The UI dynamically reads available values from the database.
 
 ### Modifying Variance Thresholds
-Edit `fuel_app.py` line 249:
+Edit `fuel_app.py` (search for `limit_kg`):
 ```python
 limit_kg = 520 if label == "Center" else 160
 ```
@@ -189,14 +192,45 @@ limit_kg = 520 if label == "Center" else 160
 Modify `Master_Stick_Recommendations.csv` with new Min_Kg/Max_Kg ranges.
 
 ### Changing Default Values
-- Pitch default: Lines 160-164 (searches for "K" in pitch label)
-- Roll default: Lines 171-173 (looks for 10.0)
-- Stick defaults: Lines 212-220
+- Pitch default: Search for `"K" in p` (searches for "K" in pitch label)
+- Roll default: Search for `10.0 in avail_rolls`
+- Stick defaults: Search for `default_stick_index`
 
 ### Styling Changes
 CSS is embedded in `fuel_app.py`:
-- Header styles: Lines 49-76
-- Scoreboard styles: Lines 279-307
+- Header styles: Search for `.tech-header-container`
+- Scoreboard styles: Search for `.cockpit-display`
+- PWA install banner: Search for `.pwa-install-banner`
+
+---
+
+## Progressive Web App (PWA) Support
+
+The application is installable as a standalone app on mobile and desktop devices.
+
+### Features
+- **Installable**: Users see an "Install App" banner prompting installation
+- **Custom Icon**: Uses `logo.png` as the app icon on home screen
+- **App Name**: Displays as "B737 Fuel" (short) or "B737 Fuel Calculator" (full)
+- **Standalone Mode**: Runs without browser chrome when installed
+- **Theme Color**: Dark theme (#2c3e50) matching the app header
+
+### How to Install
+1. **Chrome/Edge Desktop**: Click the install icon in the address bar, or use menu > "Install B737 Fuel Calculator"
+2. **Android**: Tap the "Install App" banner or use browser menu > "Add to Home Screen"
+3. **iOS Safari**: Tap Share > "Add to Home Screen"
+
+### PWA Files
+- **`manifest.json`**: Web app manifest defining app name, icons, colors, display mode
+- **`fuel_app.py` lines 34-100**: PWA meta tags and install prompt JavaScript
+
+### Updating PWA Configuration
+To change the app name or icon:
+1. Update `manifest.json` with new values
+2. Update `LOGO_URL` in `fuel_app.py` line 12 if changing the icon
+3. Update meta tags in the PWA injection block (lines 36-57)
+
+**Note**: The app requires an active server connection. Offline functionality is not supported because Streamlit apps depend on WebSocket communication with the server.
 
 ---
 
@@ -212,6 +246,8 @@ Manual testing checklist:
 5. Confirm scoreboard totals update properly
 6. Test "Mark EMPTY" checkbox functionality
 7. Verify mobile responsiveness
+8. Test PWA install prompt appears on supported browsers
+9. Verify installed PWA has correct icon and name
 
 ---
 
@@ -230,7 +266,7 @@ Manual testing checklist:
 
 4. **Aviation context**: This is aviation safety-related software. Changes should be conservative and well-tested.
 
-5. **Branding block**: Lines 6-44 are marked with clear comments. Keep branding configuration together.
+5. **Branding block**: Lines 6-100 contain branding and PWA configuration. Keep these together.
 
 6. **No build step**: This is a pure Python Streamlit app. Run directly with `streamlit run fuel_app.py`.
 

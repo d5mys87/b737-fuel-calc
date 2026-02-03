@@ -31,16 +31,104 @@ hide_streamlit_style = """
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# 4. INJECT APP ICONS FOR MOBILE
+# 4. INJECT PWA META TAGS AND MANIFEST FOR INSTALLABLE WEB APP
+MANIFEST_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{REPO_NAME}/{BRANCH}/manifest.json"
+
 st.markdown(
     f"""
     <head>
+        <!-- PWA Manifest -->
+        <link rel="manifest" href="{MANIFEST_URL}">
+
+        <!-- iOS PWA Support -->
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="B737 Fuel">
         <link rel="apple-touch-icon" href="{LOGO_URL}">
+
+        <!-- Android/Chrome PWA Support -->
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="theme-color" content="#2c3e50">
+        <meta name="application-name" content="B737 Fuel Calculator">
+
+        <!-- Standard favicon -->
         <link rel="icon" type="image/png" href="{LOGO_URL}">
+        <link rel="shortcut icon" href="{LOGO_URL}">
     </head>
     """,
     unsafe_allow_html=True
 )
+
+# 5. PWA INSTALL PROMPT BANNER
+pwa_install_css = """
+<style>
+    .pwa-install-banner {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #2c3e50, #34495e);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 30px;
+        font-family: sans-serif;
+        font-size: 0.9rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        border: 2px solid #46637f;
+    }
+    .pwa-install-banner:hover {
+        background: linear-gradient(135deg, #34495e, #2c3e50);
+    }
+    .pwa-install-icon {
+        font-size: 1.2rem;
+    }
+</style>
+
+<div class="pwa-install-banner" id="pwa-banner" onclick="installPWA()">
+    <span class="pwa-install-icon">+</span>
+    <span>Install App</span>
+</div>
+
+<script>
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('pwa-banner').style.display = 'flex';
+});
+
+function installPWA() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                document.getElementById('pwa-banner').style.display = 'none';
+            }
+            deferredPrompt = null;
+        });
+    }
+}
+
+window.addEventListener('appinstalled', () => {
+    document.getElementById('pwa-banner').style.display = 'none';
+});
+
+// Hide banner if already installed (standalone mode)
+if (window.matchMedia('(display-mode: standalone)').matches) {
+    document.addEventListener('DOMContentLoaded', function() {
+        var banner = document.getElementById('pwa-banner');
+        if (banner) banner.style.display = 'none';
+    });
+}
+</script>
+"""
+st.markdown(pwa_install_css, unsafe_allow_html=True)
 # ================= END BRANDING BLOCK =================
 
 # --- 2. HEADER FUNCTION ---
