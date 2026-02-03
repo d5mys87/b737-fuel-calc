@@ -32,43 +32,70 @@ hide_streamlit_style = """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # 4. INJECT PWA META TAGS AND MANIFEST FOR INSTALLABLE WEB APP
-# Use JavaScript to override Streamlit's default manifest and icons
-MANIFEST_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{REPO_NAME}/{BRANCH}/manifest.json"
-
+# Embed manifest directly as blob URL to bypass CORS and Streamlit's manifest
 pwa_override_script = f"""
 <script>
 (function() {{
-    // Wait for DOM to be ready
+    // Create manifest as blob URL (bypasses external loading issues)
+    var manifestData = {{
+        "name": "B737 Fuel Calculator",
+        "short_name": "B737 Fuel",
+        "description": "Fuel Quantity Indication Check for Boeing 737 aircraft",
+        "start_url": window.location.href.split('?')[0],
+        "scope": window.location.origin + "/",
+        "display": "standalone",
+        "background_color": "#1E1E1E",
+        "theme_color": "#2c3e50",
+        "orientation": "any",
+        "icons": [{{
+            "src": "{LOGO_URL}",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }}]
+    }};
+
+    var manifestBlob = new Blob([JSON.stringify(manifestData)], {{type: 'application/json'}});
+    var manifestURL = URL.createObjectURL(manifestBlob);
+
     function overridePWA() {{
-        // Remove existing manifest links
-        document.querySelectorAll('link[rel="manifest"]').forEach(el => el.remove());
+        // Remove ALL existing manifest links
+        document.querySelectorAll('link[rel="manifest"]').forEach(function(el) {{
+            el.parentNode.removeChild(el);
+        }});
 
         // Remove existing apple-touch-icon links
-        document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(el => el.remove());
+        document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(function(el) {{
+            el.parentNode.removeChild(el);
+        }});
 
         // Remove existing favicons
-        document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(el => el.remove());
+        document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(function(el) {{
+            el.parentNode.removeChild(el);
+        }});
 
-        // Add our manifest
-        var manifest = document.createElement('link');
-        manifest.rel = 'manifest';
-        manifest.href = '{MANIFEST_URL}';
-        document.head.appendChild(manifest);
+        // Add our manifest (blob URL)
+        var manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = manifestURL;
+        document.head.insertBefore(manifestLink, document.head.firstChild);
 
         // Add our favicon
         var favicon = document.createElement('link');
         favicon.rel = 'icon';
         favicon.type = 'image/png';
+        favicon.sizes = '512x512';
         favicon.href = '{LOGO_URL}';
         document.head.appendChild(favicon);
 
-        // Add apple-touch-icon
+        // Add apple-touch-icon (critical for iOS)
         var appleIcon = document.createElement('link');
         appleIcon.rel = 'apple-touch-icon';
+        appleIcon.sizes = '180x180';
         appleIcon.href = '{LOGO_URL}';
         document.head.appendChild(appleIcon);
 
-        // Add meta tags for PWA
+        // Add/update meta tags for PWA
         var metaTags = [
             {{'name': 'apple-mobile-web-app-capable', 'content': 'yes'}},
             {{'name': 'apple-mobile-web-app-status-bar-style', 'content': 'black-translucent'}},
@@ -79,25 +106,37 @@ pwa_override_script = f"""
         ];
 
         metaTags.forEach(function(tag) {{
-            // Remove existing meta tag if present
             var existing = document.querySelector('meta[name="' + tag.name + '"]');
-            if (existing) existing.remove();
-
+            if (existing) existing.parentNode.removeChild(existing);
             var meta = document.createElement('meta');
             meta.name = tag.name;
             meta.content = tag.content;
             document.head.appendChild(meta);
         }});
 
-        // Update document title
         document.title = 'B737 Fuel Calc';
     }}
 
-    // Run immediately and also after a short delay to ensure Streamlit hasn't re-added its defaults
+    // Override aggressively - Streamlit may re-inject its manifest
     overridePWA();
-    setTimeout(overridePWA, 100);
+    setTimeout(overridePWA, 50);
+    setTimeout(overridePWA, 200);
     setTimeout(overridePWA, 500);
     setTimeout(overridePWA, 1000);
+    setTimeout(overridePWA, 2000);
+
+    // Also observe for any new manifest links being added
+    var observer = new MutationObserver(function(mutations) {{
+        mutations.forEach(function(mutation) {{
+            mutation.addedNodes.forEach(function(node) {{
+                if (node.tagName === 'LINK' && node.rel === 'manifest' && node.href !== manifestURL) {{
+                    node.parentNode.removeChild(node);
+                    overridePWA();
+                }}
+            }});
+        }});
+    }});
+    observer.observe(document.head, {{ childList: true }});
 }})();
 </script>
 """
