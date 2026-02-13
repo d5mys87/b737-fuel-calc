@@ -293,6 +293,8 @@ df_db, df_recs = data_res
 # --- 5. SESSION STATE ---
 for k in ['left_qty', 'center_qty', 'right_qty']:
     if k not in st.session_state: st.session_state[k] = 0
+for k in ['left_alert', 'center_alert', 'right_alert']:
+    if k not in st.session_state: st.session_state[k] = False
 
 # --- 6. SCOREBOARD PLACEHOLDER ---
 scoreboard = st.empty()
@@ -350,10 +352,11 @@ tab1, tab2, tab3 = st.tabs(["Left Wing", "Center", "Right Wing"])
 
 def render_tab(label, key, scope, default_side):
     st.subheader(f"{label} Tank")
-    
+
     # --- Default value=True so tanks start as EMPTY ---
     if st.checkbox(f"Mark {label} EMPTY", value=True, key=f"{key}_empty"):
         st.session_state[f"{key}_qty"] = 0
+        st.session_state[f"{key}_alert"] = False
         st.info(f"{label} Tank = 0 Kgs")
         return 
 
@@ -418,21 +421,24 @@ def render_tab(label, key, scope, default_side):
 
         if val is not None:
             limit_kg = 520 if label == "Center" else 160
-            
+
             is_alert = False
             if est > 0:
                 diff = abs(est - val)
                 if diff > limit_kg: is_alert = True
-            
+
+            # Always set the fuel value, track alert status separately
+            st.session_state[f"{key}_qty"] = val
+            st.session_state[f"{key}_alert"] = is_alert
+
             if is_alert:
                 st.error(f"⚠️ VARIANCE > {limit_kg} KGS")
                 st.write(f"Calc: **{int(val)}** | Est: **{est}**")
-                st.session_state[f"{key}_qty"] = 0
             else:
                 st.success(f"✅ Verified: {int(val)}")
-                st.session_state[f"{key}_qty"] = val
         else:
             st.session_state[f"{key}_qty"] = 0
+            st.session_state[f"{key}_alert"] = False
 
 with tab1: render_tab("Left", "left", "Main Wing Tank", "Left")
 with tab2: render_tab("Center", "center", "Center Tank", "Left")
@@ -440,64 +446,87 @@ with tab3: render_tab("Right", "right", "Main Wing Tank", "Right")
 
 # --- 10. SCOREBOARD ---
 final_total = (
-    st.session_state.left_qty + 
-    st.session_state.center_qty + 
+    st.session_state.left_qty +
+    st.session_state.center_qty +
     st.session_state.right_qty
 )
 
-total_color = "#00FF00" if final_total > 0 else "#888"
+has_any_alert = (
+    st.session_state.left_alert or
+    st.session_state.center_alert or
+    st.session_state.right_alert
+)
 
-st_style = """
+# Determine colors based on alert status
+if has_any_alert:
+    total_color = "#ff4444"
+    border_color = "#ff4444"
+    box_shadow = "0 0 15px rgba(255, 68, 68, 0.3)"
+elif final_total > 0:
+    total_color = "#00FF00"
+    border_color = "#444"
+    box_shadow = "none"
+else:
+    total_color = "#888"
+    border_color = "#444"
+    box_shadow = "none"
+
+# Individual tank colors
+left_color = "#ff4444" if st.session_state.left_alert else "#FFF"
+center_color = "#ff4444" if st.session_state.center_alert else "#FFF"
+right_color = "#ff4444" if st.session_state.right_alert else "#FFF"
+
+st_style = f"""
 <style>
-    .cockpit-display {
-        background-color: #1E1E1E; border: 3px solid #444;
+    .cockpit-display {{
+        background-color: #1E1E1E; border: 3px solid {border_color};
         border-radius: 15px; padding: 20px; text-align: center;
         font-family: monospace; color: #E0E0E0; margin-bottom: 20px;
-    }
-    .gauge-row {
+        box-shadow: {box_shadow};
+    }}
+    .gauge-row {{
         display: flex; justify-content: space-around;
         border-bottom: 2px solid #333; padding-bottom: 15px;
         flex-wrap: wrap;
-    }
-    .gauge-container {
+    }}
+    .gauge-container {{
         display: flex; flex-direction: column;
         align-items: center; margin: 5px; min-width: 80px;
-    }
-    .gauge-label {
+    }}
+    .gauge-label {{
         color: #00BFFF; font-size: 1rem; font-weight: bold;
-    }
-    .gauge-value {
-        font-size: 1.5rem; font-weight: bold; color: #FFF;
+    }}
+    .gauge-value {{
+        font-size: 1.5rem; font-weight: bold;
         background-color: #000; padding: 5px 10px;
         border-radius: 5px; border: 2px solid #333;
-    }
-    .total-value {
-        font-size: 2.5rem; font-weight: bold; color: COLOR_PLACEHOLDER;
+    }}
+    .total-value {{
+        font-size: 2.5rem; font-weight: bold; color: {total_color};
         margin-top: 10px;
-    }
+    }}
 </style>
-""".replace("COLOR_PLACEHOLDER", total_color)
+"""
 
 st_html = f"""
 <div class="cockpit-display">
     <div class="gauge-row">
         <div class="gauge-container">
             <div class="gauge-label">TANK 1</div>
-            <div class="gauge-value">{int(st.session_state.left_qty):,}</div>
+            <div class="gauge-value" style="color: {left_color};">{int(st.session_state.left_qty):,}</div>
         </div>
         <div class="gauge-container">
             <div class="gauge-label">CTR</div>
-            <div class="gauge-value">{int(st.session_state.center_qty):,}</div>
+            <div class="gauge-value" style="color: {center_color};">{int(st.session_state.center_qty):,}</div>
         </div>
         <div class="gauge-container">
             <div class="gauge-label">TANK 2</div>
-            <div class="gauge-value">{int(st.session_state.right_qty):,}</div>
+            <div class="gauge-value" style="color: {right_color};">{int(st.session_state.right_qty):,}</div>
         </div>
     </div>
     <div style="margin-top:10px;">TOTAL FUEL</div>
     <div class="total-value">{int(final_total):,} <span style="font-size:1rem;color:#888;">KGS</span></div>
 </div>
 """
-
 
 scoreboard.markdown(st_style + st_html, unsafe_allow_html=True)

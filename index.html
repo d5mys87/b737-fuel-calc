@@ -153,6 +153,21 @@
             color: #888;
         }
 
+        .total-value.has-alert {
+            color: #ff4444;
+            animation: pulse-red 1s infinite;
+        }
+
+        .cockpit-display.alert-state {
+            border-color: #ff4444;
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.3);
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
         .unit {
             font-size: 1rem;
             color: #888;
@@ -590,6 +605,7 @@
         let fuelDatabase = [];
         let recommendations = [];
         let fuelQty = { left: 0, center: 0, right: 0 };
+        let fuelAlert = { left: false, center: false, right: false };
 
         // Parse CSV
         function parseCSV(text) {
@@ -819,6 +835,7 @@
         function calculate(tank) {
             if (document.getElementById(`${tank}-empty`).checked) {
                 fuelQty[tank] = 0;
+                fuelAlert[tank] = false;
                 updateDisplay();
                 return;
             }
@@ -834,6 +851,7 @@
 
             if (reading === 0) {
                 fuelQty[tank] = 0;
+                fuelAlert[tank] = false;
                 updateDisplay();
                 return;
             }
@@ -857,6 +875,10 @@
                     if (diff > limitKg) isAlert = true;
                 }
 
+                // Always set the fuel value, track alert status separately
+                fuelQty[tank] = fuelVal;
+                fuelAlert[tank] = isAlert;
+
                 if (isAlert) {
                     resultEl.innerHTML = `
                         <div class="alert alert-error">
@@ -864,37 +886,50 @@
                             Calc: <strong>${Math.round(fuelVal)}</strong> | Est: <strong>${est}</strong>
                         </div>
                     `;
-                    fuelQty[tank] = 0;
                 } else {
                     resultEl.innerHTML = `
                         <div class="alert alert-success">
                             Verified: ${Math.round(fuelVal).toLocaleString()} kg
                         </div>
                     `;
-                    fuelQty[tank] = fuelVal;
                 }
             } else {
                 resultEl.innerHTML = '<div class="alert alert-warning">No match found</div>';
                 fuelQty[tank] = 0;
+                fuelAlert[tank] = false;
             }
 
             updateDisplay();
         }
 
         function updateDisplay() {
+            // Update individual tank displays
             document.getElementById('left-display').textContent = Math.round(fuelQty.left).toLocaleString();
             document.getElementById('center-display').textContent = Math.round(fuelQty.center).toLocaleString();
             document.getElementById('right-display').textContent = Math.round(fuelQty.right).toLocaleString();
 
+            // Highlight individual gauges if they have alerts
+            document.getElementById('left-display').style.color = fuelAlert.left ? '#ff4444' : '#FFF';
+            document.getElementById('center-display').style.color = fuelAlert.center ? '#ff4444' : '#FFF';
+            document.getElementById('right-display').style.color = fuelAlert.right ? '#ff4444' : '#FFF';
+
             const total = fuelQty.left + fuelQty.center + fuelQty.right;
+            const hasAnyAlert = fuelAlert.left || fuelAlert.center || fuelAlert.right;
             const totalEl = document.getElementById('total-display');
+            const cockpitEl = document.querySelector('.cockpit-display');
+
             totalEl.innerHTML = `${Math.round(total).toLocaleString()} <span class="unit">KGS</span>`;
 
-            if (total > 0) {
+            // Remove all state classes first
+            totalEl.classList.remove('has-fuel', 'no-fuel', 'has-alert');
+            cockpitEl.classList.remove('alert-state');
+
+            if (hasAnyAlert) {
+                totalEl.classList.add('has-alert');
+                cockpitEl.classList.add('alert-state');
+            } else if (total > 0) {
                 totalEl.classList.add('has-fuel');
-                totalEl.classList.remove('no-fuel');
             } else {
-                totalEl.classList.remove('has-fuel');
                 totalEl.classList.add('no-fuel');
             }
         }
